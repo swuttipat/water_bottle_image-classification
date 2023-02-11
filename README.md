@@ -16,7 +16,7 @@
 ### [Importing Data from the Directory](#load_dataset) 
 ### [Data Preprocessing](#data_preprocessing) 
 ### [Machine Learning Model](#machine_learning_model) 
-### [Note](#note)
+### [Note](#note_)
 
 <a id='introduction'></a>
 # Introduction
@@ -233,7 +233,7 @@ plt.show()
     
 
 
-<a id='note'></a>
+<a id='note_'></a>
 # Note
 #### Improving a machine learning model can be achieved by using various techniques such as:
 
