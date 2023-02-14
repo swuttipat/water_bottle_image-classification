@@ -23,7 +23,7 @@
 ### 5. [Hyperparameter Tuning](#hyperparameter_tuning)
 - [GridSearchCV](#gridsearchcv)
 
-##  [Note](#note)
+##  [Note](#note_)
 
 <br><br><br>
 
@@ -523,7 +523,7 @@ print(pd.DataFrame(grid_result.cv_results_))
     3         0.747162        0.042847                4  
     
 
-<a id='note'></a>
+<a id='note_'></a>
 # Note
 #### Improving a machine learning model can be achieved by using various techniques such as:
 
