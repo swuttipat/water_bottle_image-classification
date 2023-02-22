@@ -1,20 +1,23 @@
 <a id='back_to_top'></a>
-# Water Bottle Image Classification Dataset
+# Bottle Water Images Classification-CNN & ResNet50
 "Classifying Water Bottle Images Based on Water Level Using Machine Learning"
 
 **Created By**: Wuttipat S. <br>
 **Created Date**: 2023-02-10 <br>
-**Status**: <span style="color:red">Ongoing</span>
+**Status**: <span style="color:green">Completed</span>
 
 #### Update: 
+- **Version6**
+    - Perform error analysis, fixed code error
+    - Bring the pre-trained model for performance comparing
 - **Version5**
-    1. Train and run model with resampling set, which return accucary
+    - Train and run model with resampling set, which return accucary
         - 49% with GridSearchCV (Further tune)
 - **Version4**
-    1. Add Data Resampling
-    2. Add load images included .*png* file
+    - Add Data Resampling
+    - Add load images included .*png* file
 - **Version3**
-    1. Add heatmap crosstab plot
+    - Add confusion matrix plot
 
 # Table of contents
 
@@ -23,14 +26,18 @@
 - [Dataset Description](#dataset_description)
 - [About this directory](#about_this_directory) 
 
-### 2. [Importing Data from the Directory](#load_dataset) 
-### 3. [Data Preprocessing](#data_preprocessing) 
+### 2. [My Tasks](#my_tasks)
+### 3. [Importing Data from the Directory](#load_dataset) 
+### 4. [Data Preprocessing](#data_preprocessing) 
 1. [Data Augmentation & Data Resampling](#data_augmentation)
 2. [Nomalizing images value](#nomalizing_images_value)
 3. [Convert the labels into one-hot encoder array](#convert_the_labels_into_one_hot_encoder_array)
 
-### 4. [Machine Learning Model](#machine_learning_model) 
-### 5. [Hyperparameter Tuning](#hyperparameter_tuning)
+### 5. [Machine Learning Model](#machine_learning_model) 
+* [CNN model](#cnn_model)
+* [Modified pre-trained model(ResNet50)](#resnet50)
+
+### 6. [Hyperparameter Tuning](#hyperparameter_tuning)
 - [GridSearchCV](#gridsearchcv)
 
 ##  [Note](#note)
@@ -63,10 +70,32 @@ The dataset is likely to be useful for a variety of applications, such as develo
 2. Half water lavel - 139 images of half water bottle
 3. Overflowing - 39 images of overflowing bottle
 
+
+---
+<a id='my_tasks'></a>
+## My Tasks - Image Classification Project
+
+
+1. Create, train, and validate **CNN** model for water bottle images classification:
+    - Load dataset of water bottle images, and split it into training, validation, and testing sets.
+    - Design a convolutional neural network (CNN) architecture that is suitable for image classification, and implement it using a deep learning TensorFlow.
+    - Train the CNN using the training set, and validate it using the validation set to check for overfitting.
+    - Evaluate the trained model using the testing set, and report its accuracy and other relevant metrics.
+
+2. Conduct the pre-trained model **ResNet50** into comparison with prior created model:
+    - Load the pre-trained ResNet50 model into the notebook and modify it to suit our specific image classification problem.
+    - Train the modified ResNet50 model using the same training set as the prior created model.
+    - Evaluate the performance of the modified ResNet50 model on the validation and testing sets, and compare it to the prior created model.
+
+3. Build the **GridSearchCV** searching through optimize parameter for the model:
+    - Choose the relevant hyperparameters that can be tuned for the CNN models, such as the learning rate, batch size, and optimizer algorithm.
+    - Implement a grid search to exhaustively search through the hyperparameter space and find the optimal combination of hyperparameters that yields the best performance on the validation set.
+    - Train the CNN model with the optimized hyperparameters and evaluate its performance on the testing set.
+
 ---
 <a id='load_dataset'></a>
 ## Importing Data from the Directory
-I started by importing the data from the directory. Using the OS module in python to access the directory and its sub-directories. Then use the OpenCV library to read the image files and convert them into arrays that can be processed by the machine learning model.
+I started by importing the data from the directory. Using the `OS` module in python to access the directory and its sub-directories. Then use the `OpenCV` library to read the image files and convert them into arrays that can be processed by the machine learning model.
 
 
 ```python
@@ -112,10 +141,6 @@ print(f'data shape:{data.shape}')
 print(f'labels shape:{labels.shape}')
 ```
 
-    data shape:(486, 128, 128, 3)
-    labels shape:(486,)
-    
-
 
 ```python
 '''
@@ -129,12 +154,6 @@ df.value_counts().plot(kind='bar')
 plt.xticks(rotation = 0) # Rotates X-Axis Ticks by 45-degrees
 plt.show()
 ```
-
-
-    
-![png](water-bottle-dataset-CNNs_files/water-bottle-dataset-CNNs_10_0.png)
-    
-
 
 ---
 <a id='data_preprocessing'></a>
@@ -155,11 +174,12 @@ Now that we have imported the data, and need to clean and preprocess the data so
 <a id='data_augmentation'></a>
 #### 1. Data Augmentation & Data Resampling
 
-* In the begining of developing the model I generate images by multiplte them for original dateset, the accuracy given is above 80%. But I realize that not answer I look for, since the majority label of dataset is "Full Water Level". My model are overfitting with the training data, furthermore the test set also engoving with "Full Water Level", thus it typical to return high accuracy score.
-* Next step I bring a *Data Resampling* to fix the overfitting problem. Trainning and test set are equally labels generated.
+* In the begining of developing the model I generate images by multiplte them for original dateset, the accuracy given is above 80%. But I realize that not answer I look for, since the majority label of dataset is "Full Water Level". My model are overfitting with the training data, In addition the test set also engoving with "Full Water Level", thus it typical to return high accuracy score.
+* Next step I bring a **Data Resampling** to fix the overfitting problem. Trainning and test set are equally labels generated.
 
 
 ```python
+
 # Generate augmented data
 
 from keras.preprocessing.image import ImageDataGenerator
@@ -167,7 +187,7 @@ from keras.preprocessing.image import ImageDataGenerator
 # Load the data
 X = data # array of preprocessed data
 y = labels # array of labels
-n_gen = 30
+n_gen = 40
 
 # Create data generator
 datagen = ImageDataGenerator(
@@ -186,12 +206,17 @@ datagen.fit(X)
 X_augmented, y_augmented = [], []
 
 '''
-# Non resampling
-for X_batch, y_batch in datagen.flow(X, y, batch_size=32):
-    X_augmented.append(X_batch)
-    y_augmented.append(y_batch)
-    if len(X_augmented) >= 100: # Setting generated augmented data
-        break
+1st Option multiple dataset with same ratio
+'''
+# # Non resampling
+# for X_batch, y_batch in datagen.flow(X, y, batch_size=32):
+#     X_augmented.append(X_batch)
+#     y_augmented.append(y_batch)
+#     if len(X_augmented) >= 100: # Setting generated augmented data
+#         break
+
+'''
+2nd Option resampling with equaly labels ratio
 '''
 # With resampling
 for X_batch, y_batch in datagen.flow(X[:308], y[:308], batch_size=32):
@@ -222,22 +247,8 @@ print(f"labels augmented shape : {labels.shape}")
 import pandas as pd
 df = pd.DataFrame({"label":labels})
 df.value_counts()
+
 ```
-
-    data augmented shape : (3635, 128, 128, 3)
-    labels augmented shape : (3635,)
-    
-
-
-
-
-    label            
-    Half water level     1240
-    Full  Water level    1232
-    Overflowing          1163
-    dtype: int64
-
-
 
 
 ```python
@@ -254,15 +265,9 @@ plt.xticks(rotation = 0) # Rotates X-Axis Ticks by 45-degrees
 plt.show()
 ```
 
-
-    
-![png](water-bottle-dataset-CNNs_files/water-bottle-dataset-CNNs_14_0.png)
-    
-
-
 #### Train and Test Split
 
-* Although mostly neural network improve the train-test split function for itself.
+* Although mostly neural network previde the train-test split function for itself.
 * I want to see a result more visualize by plot a *Confusion matrix* from *Predicted of test* and *True labels of test*. 
 
 
@@ -293,23 +298,6 @@ df = pd.DataFrame({"test_labels":y_test})
 print(df.value_counts())
 ```
 
-    data shape:(2908, 128, 128, 3)
-    labels shape:(2908,)
-    label            
-    Half water level     1000
-    Full  Water level     978
-    Overflowing           930
-    dtype: int64
-    
-    test_date shape:(727, 128, 128, 3)
-    test_labels shape:(727,)
-    test_labels      
-    Full  Water level    254
-    Half water level     240
-    Overflowing          233
-    dtype: int64
-    
-
 <a id='nomalizing_images_value'></a>
 #### 2. Nomalizing images value
 
@@ -317,10 +305,7 @@ print(df.value_counts())
 ```python
 # Normalize the pixel values to a range between 0 and 1
 data = data / 255.0
-
-
-# Preprocess the input data
-#data = np.reshape(data, (data.shape[0], 224, 224, 3)) # Reshape image pixel values into specific value
+X_test = X_test / 225.0
 ```
 
 <a id='convert_the_labels_into_one_hot_encoder_array'></a>
@@ -340,6 +325,13 @@ for i, label in enumerate(labels):
         labels_one_hot[i, 1] = 1
     else:
         labels_one_hot[i, 2] = 1
+        
+```
+
+
+```python
+# Show converted output
+print(labels_one_hot[0])
 ```
 
 
@@ -370,13 +362,7 @@ for i, img in enumerate(sample_images):
 plt.show()
 ```
 
-
-    
-![png](water-bottle-dataset-CNNs_files/water-bottle-dataset-CNNs_23_0.png)
-    
-
-
-###### Generate augmented images files
+#### Generate augmented images files (Optional)
 
 
 ```python
@@ -401,20 +387,31 @@ for i, image in enumerate(augmented_data):
 '''
 ```
 
-
-
-
-    '\n# Save augmented images to specific directory --- Uncomment to use\n# create new directory to save augmented images\nimport os\n\n# Check existing directory, if not: crate new directory\nif not os.path.exists("augmented_images"):\n    os.makedirs("augmented_images")\n\naugmented_data = data\nlabels = labels\n# loop through each image in the augmented data\nfor i, image in enumerate(augmented_data):\n    # convert the image back to its original form\n    image = (image).astype("uint8")\n    \n    # save the image to the new directory\n    cv2.imwrite(f"augmented_images/augmented_{labels[i]}_{i}.jpeg", image)\n'
-
-
-
 ---
 <a id='machine_learning_model'></a>
 ## Machine Learning Model
-Finally, we will build, train, and evaluate machine learning models for the image classification problem. I will use the Keras library in Python to build and train the models.
+Finally, we will build, train, and evaluate machine learning models for the image classification problem. I will use the `Keras` and `TensorFlow` library in Python to build and train the models.
+
+Here is a list of layers available in TensorFlow along with a brief explanation about each:
+
+- **Dense Layer**: A dense layer is a fully connected layer where every input node is connected to every output node. It is the most basic layer in TensorFlow and is used for constructing deep neural networks.
+
+- **Convolutional Layer**: A convolutional layer is used for image classification tasks. It uses filters to extract features from the input data.
+
+- **Dropout Layer**: A dropout layer is used to prevent overfitting by randomly dropping out neurons during training.
+
+- **Batch Normalization** Layer: A batch normalization layer is used to normalize the inputs to a deep neural network. This helps to improve the training process and prevent overfitting.
+
+- **Pooling Layer**: A pooling layer is used to reduce the dimensionality of the input data. It is commonly used in image classification tasks to reduce the size of the input image.
+
+- **Flatten Layer**: A flatten layer is used to convert the input data from a high-dimensional array to a one-dimensional array. This is used in image classification tasks to prepare the input data for the fully connected layer.
+
+<a id='cnn_model'></a>
+### CNN model
 
 
 ```python
+
 import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import layers
@@ -427,16 +424,23 @@ tf.random.set_seed(42)
 # Build the model using a Convolutional Neural Network
 model = keras.Sequential([
     keras.layers.Conv2D(32, (3,3), activation='relu', input_shape=(128,128,3)),
+    keras.layers.Conv2D(32, (3,3), activation='relu'),
     keras.layers.MaxPooling2D(2,2),
+    keras.layers.Dropout(0.2),
     
     keras.layers.Conv2D(64, (3,3), activation='relu'),
+    keras.layers.Conv2D(64, (3,3), activation='relu'),
     keras.layers.MaxPooling2D(2,2),
+    keras.layers.Dropout(0.2),
     
-    keras.layers.Conv2D(128, (3,3), activation='relu'),
-#     keras.layers.MaxPooling2D(2,2),
+    keras.layers.Conv2D(256, (3,3), activation='relu'),
+    keras.layers.Conv2D(256, (3,3), activation='relu'),
+    keras.layers.MaxPooling2D(2,2),
+    keras.layers.Dropout(0.2),
     
     keras.layers.Flatten(),
-    keras.layers.Dense(128, activation='relu'),
+    keras.layers.Dense(1024, activation='relu'),
+    keras.layers.Dropout(0.5),
     keras.layers.Dense(3, activation='softmax')
 ])
 
@@ -446,50 +450,14 @@ model.compile(optimizer=Adam(), loss='categorical_crossentropy', metrics=['accur
 
 # See an overview of the model architecture and to debug issues related to the model layers.
 model.summary()
+
 ```
-
-    2023-02-19 09:20:39.747937: I tensorflow/stream_executor/cuda/cuda_gpu_executor.cc:937] successful NUMA node read from SysFS had negative value (-1), but there must be at least one NUMA node, so returning NUMA node zero
-    2023-02-19 09:20:39.836313: I tensorflow/stream_executor/cuda/cuda_gpu_executor.cc:937] successful NUMA node read from SysFS had negative value (-1), but there must be at least one NUMA node, so returning NUMA node zero
-    2023-02-19 09:20:39.837246: I tensorflow/stream_executor/cuda/cuda_gpu_executor.cc:937] successful NUMA node read from SysFS had negative value (-1), but there must be at least one NUMA node, so returning NUMA node zero
-    2023-02-19 09:20:39.839013: I tensorflow/core/platform/cpu_feature_guard.cc:142] This TensorFlow binary is optimized with oneAPI Deep Neural Network Library (oneDNN) to use the following CPU instructions in performance-critical operations:  AVX2 AVX512F FMA
-    To enable them in other operations, rebuild TensorFlow with the appropriate compiler flags.
-    2023-02-19 09:20:39.839349: I tensorflow/stream_executor/cuda/cuda_gpu_executor.cc:937] successful NUMA node read from SysFS had negative value (-1), but there must be at least one NUMA node, so returning NUMA node zero
-    2023-02-19 09:20:39.840200: I tensorflow/stream_executor/cuda/cuda_gpu_executor.cc:937] successful NUMA node read from SysFS had negative value (-1), but there must be at least one NUMA node, so returning NUMA node zero
-    2023-02-19 09:20:39.840941: I tensorflow/stream_executor/cuda/cuda_gpu_executor.cc:937] successful NUMA node read from SysFS had negative value (-1), but there must be at least one NUMA node, so returning NUMA node zero
-    2023-02-19 09:20:41.988357: I tensorflow/stream_executor/cuda/cuda_gpu_executor.cc:937] successful NUMA node read from SysFS had negative value (-1), but there must be at least one NUMA node, so returning NUMA node zero
-    2023-02-19 09:20:41.989268: I tensorflow/stream_executor/cuda/cuda_gpu_executor.cc:937] successful NUMA node read from SysFS had negative value (-1), but there must be at least one NUMA node, so returning NUMA node zero
-    2023-02-19 09:20:41.990077: I tensorflow/stream_executor/cuda/cuda_gpu_executor.cc:937] successful NUMA node read from SysFS had negative value (-1), but there must be at least one NUMA node, so returning NUMA node zero
-    2023-02-19 09:20:41.990762: I tensorflow/core/common_runtime/gpu/gpu_device.cc:1510] Created device /job:localhost/replica:0/task:0/device:GPU:0 with 15401 MB memory:  -> device: 0, name: Tesla P100-PCIE-16GB, pci bus id: 0000:00:04.0, compute capability: 6.0
-    
-
-    Model: "sequential"
-    _________________________________________________________________
-    Layer (type)                 Output Shape              Param #   
-    =================================================================
-    conv2d (Conv2D)              (None, 126, 126, 32)      896       
-    _________________________________________________________________
-    max_pooling2d (MaxPooling2D) (None, 63, 63, 32)        0         
-    _________________________________________________________________
-    conv2d_1 (Conv2D)            (None, 61, 61, 64)        18496     
-    _________________________________________________________________
-    max_pooling2d_1 (MaxPooling2 (None, 30, 30, 64)        0         
-    _________________________________________________________________
-    conv2d_2 (Conv2D)            (None, 28, 28, 128)       73856     
-    _________________________________________________________________
-    flatten (Flatten)            (None, 100352)            0         
-    _________________________________________________________________
-    dense (Dense)                (None, 128)               12845184  
-    _________________________________________________________________
-    dense_1 (Dense)              (None, 3)                 387       
-    =================================================================
-    Total params: 12,938,819
-    Trainable params: 12,938,819
-    Non-trainable params: 0
-    _________________________________________________________________
-    
 
 
 ```python
+import time
+start_time = time.time() #To show the training time
+
 # Train the model
 
 # set an early stopping mechanism
@@ -499,95 +467,126 @@ early_stopping = tf.keras.callbacks.EarlyStopping(patience=5)
 # history = model.fit(data, labels_one_hot, batch_size=32, epochs=10, validation_split=0.2)
 history = model.fit(x=data,
                     y=labels_one_hot,
-                    batch_size=256, #128 best
-                    epochs=50,
-                    validation_split=0.2,
-                    callbacks=[early_stopping])
+                    batch_size=256,
+                    epochs=100,
+                    validation_split=0.2,)
+#                     callbacks=[early_stopping])
 
 # Evaluate the model
 print("Test accuracy: ", max(history.history['val_accuracy']))
+
+# Assign the trained model
+self_train_model = history
+
+end_time = time.time() # To show the training time 
+training_time = end_time - start_time
+print("Training time:", training_time, "seconds")
+
+self_train_model_time = training_time
 ```
 
-    2023-02-19 09:20:43.625478: I tensorflow/compiler/mlir/mlir_graph_optimization_pass.cc:185] None of the MLIR Optimization Passes are enabled (registered 2)
-    
+<a id='resnet50'></a>
+### Modified ResNet50
 
-    Epoch 1/50
-    
 
-    2023-02-19 09:20:45.525152: I tensorflow/stream_executor/cuda/cuda_dnn.cc:369] Loaded cuDNN version 8005
-    
+```python
+from tensorflow.keras.applications.resnet50 import ResNet50
+from tensorflow.keras.layers import Dense, Flatten
+from tensorflow.keras.models import Model
 
-    10/10 [==============================] - 10s 159ms/step - loss: 2.3181 - accuracy: 0.3611 - val_loss: 1.0902 - val_accuracy: 0.4141
-    Epoch 2/50
-    10/10 [==============================] - 1s 105ms/step - loss: 1.0913 - accuracy: 0.4144 - val_loss: 1.0530 - val_accuracy: 0.3935
-    Epoch 3/50
-    10/10 [==============================] - 1s 97ms/step - loss: 1.0268 - accuracy: 0.4583 - val_loss: 1.0669 - val_accuracy: 0.3969
-    Epoch 4/50
-    10/10 [==============================] - 1s 84ms/step - loss: 0.9970 - accuracy: 0.4665 - val_loss: 0.9407 - val_accuracy: 0.5206
-    Epoch 5/50
-    10/10 [==============================] - 1s 85ms/step - loss: 0.9410 - accuracy: 0.5301 - val_loss: 0.8913 - val_accuracy: 0.5412
-    Epoch 6/50
-    10/10 [==============================] - 1s 84ms/step - loss: 0.8923 - accuracy: 0.5615 - val_loss: 0.8451 - val_accuracy: 0.6254
-    Epoch 7/50
-    10/10 [==============================] - 1s 83ms/step - loss: 0.8441 - accuracy: 0.6096 - val_loss: 0.8817 - val_accuracy: 0.6134
-    Epoch 8/50
-    10/10 [==============================] - 1s 87ms/step - loss: 0.7734 - accuracy: 0.6436 - val_loss: 0.7399 - val_accuracy: 0.6564
-    Epoch 9/50
-    10/10 [==============================] - 1s 87ms/step - loss: 0.6714 - accuracy: 0.6900 - val_loss: 0.6636 - val_accuracy: 0.7131
-    Epoch 10/50
-    10/10 [==============================] - 1s 86ms/step - loss: 0.5831 - accuracy: 0.7571 - val_loss: 0.8564 - val_accuracy: 0.6907
-    Epoch 11/50
-    10/10 [==============================] - 1s 87ms/step - loss: 0.6374 - accuracy: 0.7261 - val_loss: 0.6469 - val_accuracy: 0.7131
-    Epoch 12/50
-    10/10 [==============================] - 1s 85ms/step - loss: 0.5129 - accuracy: 0.7889 - val_loss: 0.6998 - val_accuracy: 0.7062
-    Epoch 13/50
-    10/10 [==============================] - 1s 87ms/step - loss: 0.4760 - accuracy: 0.8074 - val_loss: 0.7764 - val_accuracy: 0.6890
-    Epoch 14/50
-    10/10 [==============================] - 1s 84ms/step - loss: 0.4329 - accuracy: 0.8173 - val_loss: 0.5741 - val_accuracy: 0.7852
-    Epoch 15/50
-    10/10 [==============================] - 1s 94ms/step - loss: 0.3433 - accuracy: 0.8667 - val_loss: 0.6560 - val_accuracy: 0.7801
-    Epoch 16/50
-    10/10 [==============================] - 1s 90ms/step - loss: 0.3001 - accuracy: 0.8891 - val_loss: 0.7499 - val_accuracy: 0.7887
-    Epoch 17/50
-    10/10 [==============================] - 1s 86ms/step - loss: 0.2438 - accuracy: 0.9127 - val_loss: 0.6040 - val_accuracy: 0.7973
-    Epoch 18/50
-    10/10 [==============================] - 1s 86ms/step - loss: 0.2137 - accuracy: 0.9209 - val_loss: 0.6148 - val_accuracy: 0.7990
-    Epoch 19/50
-    10/10 [==============================] - 1s 86ms/step - loss: 0.1831 - accuracy: 0.9364 - val_loss: 0.7117 - val_accuracy: 0.7818
-    Test accuracy:  0.7989690899848938
-    
+import time
+start_time = time.time() #To show the training time
+
+X=data
+y=labels_one_hot
+
+# set seed value for randomization
+tf.random.set_seed(42)
+
+# Load pre-trained ResNet50 model
+resnet = ResNet50(include_top=False, input_shape=(128, 128, 3))
+
+# Freeze layers in ResNet50 model
+for layer in resnet.layers:
+    layer.trainable = False
+
+# Add new classification layers
+x = Flatten()(resnet.output)
+x = Dense(128, activation='relu')(x)
+x = Dense(3, activation='softmax')(x)
+
+# Create new model
+model = Model(inputs=resnet.input, outputs=x)
+
+# Compile the model
+model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+
+# Train the model
+history = model.fit(X, y, epochs=100, batch_size=256, validation_split=0.2)
+
+# Evaluate the model
+print("Test accuracy: ", max(history.history['val_accuracy']))
+
+# Assign the trained model
+pre_train_model = history
+
+end_time = time.time() # To show the training time 
+training_time = end_time - start_time
+print("Training time:", training_time, "seconds")
+
+pre_train_model_time = training_time
+```
 
 ##### Plot evalution results
 
 
 ```python
-import matplotlib.pyplot as plt
-
-results =  history.history
-# Plot the accuracy history
-# plot each line in the dictionary
-for key in results:
-    plt.plot(results[key], label=key)
+def plot_model_loss_and_acc(model, name):
+    import matplotlib.pyplot as plt
     
-plt.title('Model Results')
-plt.ylabel('Scores')
-plt.xlabel('Epoch')
-plt.legend(list(results.keys()))
-plt.ylim(0,1.1)
-plt.show()
+    # Assign model to variable 'history'
+    history = model
+    
+    # Set Figure size
+    plt.figure(figsize=(10,5))
+    
+    # Plot the training and validation loss
+    plt.subplot(1,2,1)
+    plt.plot(history.history['loss'], label='training loss')
+    plt.plot(history.history['val_loss'], label='validation loss')
+    plt.xlabel('epochs')
+    plt.ylabel('loss')
+    plt.legend()
+    plt.ylim(0,1.1)
+
+
+
+    # Plot the training and validation accuracy
+    plt.subplot(1,2,2)
+    plt.plot(history.history['accuracy'], label='training accuracy')
+    plt.plot(history.history['val_accuracy'], label='validation accuracy')
+    plt.xlabel('epochs')
+    plt.ylabel('accuracy')
+    plt.legend()
+    plt.ylim(0,1.1)
+    
+    plt.suptitle(name)
+    plt.show()
 ```
 
 
-    
-![png](water-bottle-dataset-CNNs_files/water-bottle-dataset-CNNs_30_0.png)
-    
-
+```python
+plot_model_loss_and_acc(self_train_model, 'Self Train CNNs')
+plot_model_loss_and_acc(pre_train_model, 'With Pre-trained Model(Resnet50)')
+```
 
 #### Plot confusion matrix
 
 
 ```python
-# Convert np.ndarray(n,3) into List of predicted labels
+'''
+Convert np.ndarray(n,3) into List of predicted labels
+'''
 def output_converter(model_output):
 
     import numpy as np
@@ -604,7 +603,9 @@ def output_converter(model_output):
 
 
 ```python
-# Plot a Heatmap-Crosstab table out of predicted labels and True labels
+'''
+Plot a Heatmap-Crosstab table out of predicted labels and True labels
+'''
 def plot_hm_ct(y_true, y_pred): 
     import pandas as pd
     import seaborn as sns
@@ -630,30 +631,102 @@ def plot_hm_ct(y_true, y_pred):
 
 
 ```python
-# Load output data
-y_pred = output_converter(history.model.predict(X_test))
-y_true = y_test
+'''
+Generate confusion matrix from trained model
+'''
+def generate_cf(model, name):
+    
+    import pandas as pd
+    import seaborn as sns
+    import matplotlib.pyplot as plt
+    
+    # Assign model to variable 'history'
+    history = model
+    
+    # Load output data
+    y_pred = output_converter(history.model.predict(X_test))
+    y_true = y_test
 
-# Plot the confusion matrix
-plot_hm_ct(y_true, y_pred)
+    # Plot the confusion matrix
+    # create a DataFrame from y_true and y_pred
+    df = pd.DataFrame({'y_true': y_true, 'y_pred': y_pred})
 
-# Calculate accuracy score
-from sklearn.metrics import accuracy_score
-accuracy = accuracy_score(y_true, y_pred)
-print("accuracy score:{}".format(accuracy))
+    # create cross-tabulation matrix
+    ctab = pd.crosstab(df['y_true'], df['y_pred'])
+
+    # create heatmap using seaborn
+    sns.heatmap(ctab, annot=True, cmap='Blues', fmt='d')
+
+    # add labels and title
+    plt.xlabel('Predicted label')
+    plt.ylabel('True label')
+    plt.title('{} Confusion Matrix'.format(name))
+
+    # show the plot
+    plt.show()
+
+    # Calculate accuracy score
+    from sklearn.metrics import accuracy_score
+    accuracy = accuracy_score(y_true, y_pred)
+    print("{} accuracy score: {}".format(name, accuracy))
 ```
 
 
-    
-![png](water-bottle-dataset-CNNs_files/water-bottle-dataset-CNNs_34_0.png)
-    
+```python
+generate_cf(self_train_model, 'Self Train CNNs')
+print("")
+print("")
+print("")
+generate_cf(pre_train_model, 'With Pre-trained Model (Resnet50)')
+```
 
 
-    accuracy score:0.5185694635488308
-    
+```python
+'''
+Preformance Comparision
+'''
+import pandas as pd
+import matplotlib.pyplot as plt
 
-- Although model yield a good test accuracy, but in practically we can see it on the heatmap plot our model is overfitting due to majority of training set are 'Full of Water'
-- To fix the overfitting I decide to train model with a new training set that contains same portion of data labels eqully. Then see the result.
+df = pd.DataFrame({'Model': ['CNN', 'Modified ResNet50'],
+                   'Accuracy': [max(self_train_model.history['accuracy']), max(pre_train_model.history['accuracy'])],
+                   'Time(s)': [self_train_model_time, pre_train_model_time]})
+
+# create a figure and axis object
+fig, ax = plt.subplots()
+
+# set the bar width
+bar_width = 0.35
+
+# create a bar plot for the first column on the primary y-axis
+bar1 = ax.bar(df.index, df['Accuracy'], color='b', width=bar_width, label='Accuracy')
+ax.set_ylabel('Accuracy')
+
+# create a bar plot for the second column on the secondary y-axis
+ax2 = ax.twinx()
+bar2 = ax2.bar(df.index + bar_width, df['Time(s)'], color='r', width=bar_width, label='Time(s)')
+ax2.set_ylabel('Time(s)')
+
+# set the title and x-axis label
+ax.set_title('Bar Chart with Two Columns')
+ax.set_xlabel('Index')
+
+# set the x-axis ticks and labels
+ax.set_xticks(df.index + bar_width / 2)
+ax.set_xticklabels(df['Model'])
+
+# add the legend
+handles, labels = [], []
+for ax in [ax, ax2]:
+    for h, l in zip(*ax.get_legend_handles_labels()):
+        handles.append(h)
+        labels.append(l)
+ax.legend(handles, labels, loc='best')
+
+# display the plot
+plt.show()
+
+```
 
 ---
 <a id='hyperparameter_tuning'></a>
@@ -667,7 +740,7 @@ print("accuracy score:{}".format(accuracy))
 from sklearn.model_selection import GridSearchCV
 from keras.wrappers.scikit_learn import KerasClassifier
 from keras.models import Sequential
-from keras.layers import Conv2D, MaxPooling2D, Flatten, Dense
+from keras.layers import Conv2D, MaxPooling2D, Flatten, Dense, Dropout
 import tensorflow as tf
 from keras.callbacks import EarlyStopping
 
@@ -675,28 +748,39 @@ from keras.callbacks import EarlyStopping
 import warnings
 warnings.filterwarnings('ignore') # Hide all warnings
 
+import time
+start_time = time.time() #To show the training time
 
 tf.random.set_seed(42)
-batch_size = [256, 512]
-epochs = [15,25]
+batch_size = [128 ,256]
+epochs = [50,100]
 optimizer = ['adam']
 # optimizer = ['adam', 'rmsprop']
-cv = 5 # None mean default (K-fold=5)
+# cv = 5 # None mean default (K-fold=5)
+cv = [(slice(None), slice(None))]
 
-# Define early stopping
-# early_stopping = EarlyStopping(monitor='val_loss', patience=5)
 
 # Design Model Layers
 def create_model(optimizer):
     model = Sequential()
     model.add(Conv2D(32, (3,3), activation='relu', input_shape=(128, 128, 3)))
-    model.add(MaxPooling2D(2,2))
-    model.add(Conv2D(64, (3,3), activation='relu'))
-    model.add(MaxPooling2D(2,2))
-    model.add(Conv2D(128, (3,3), activation='relu'))
-    model.add(MaxPooling2D(2,2))
+    model.add(Conv2D(32, (3, 3),activation='relu'))
+    model.add(MaxPooling2D(pool_size=(2, 2)))
+    model.add(Dropout(0.2))
+
+    model.add(Conv2D(64, (3, 3), activation='relu',padding='same'))
+    model.add(Conv2D(64, (3, 3), activation='relu'))
+    model.add(MaxPooling2D(pool_size=(2, 2)))
+    model.add(Dropout(0.2))
+
+    model.add(Conv2D(256, (3, 3), activation='relu',padding='same'))
+    model.add(Conv2D(256, (3, 3),activation='relu'))
+    model.add(MaxPooling2D(pool_size=(2, 2)))
+    model.add(Dropout(0.2))
+
     model.add(Flatten())
-    model.add(Dense(128, activation='relu'))
+    model.add(Dense(1024, activation='relu'))
+    model.add(Dropout(0.5))
     model.add(Dense(3, activation='softmax'))
     model.compile(loss='categorical_crossentropy', optimizer=optimizer, metrics=['accuracy'])
     return model
@@ -719,34 +803,21 @@ stds = grid_result.cv_results_['std_test_score']
 params = grid_result.cv_results_['params']
 for mean, stdev, param in zip(means, stds, params):
     print("%f (%f) with: %r" % (mean, stdev, param))
+    
+end_time = time.time() # To show the training time 
+training_time = end_time - start_time
+print("Training time:", training_time, "seconds")
+grid_time = training_time
 ```
 
-    3/3 [==============================] - 0s 23ms/step - loss: 0.5606 - accuracy: 0.7852
-    3/3 [==============================] - 0s 21ms/step - loss: 0.6227 - accuracy: 0.7715
-    3/3 [==============================] - 0s 20ms/step - loss: 0.6127 - accuracy: 0.8007
-    3/3 [==============================] - 0s 76ms/step - loss: 0.5651 - accuracy: 0.7797
-    3/3 [==============================] - 0s 20ms/step - loss: 0.5815 - accuracy: 0.7814
-    3/3 [==============================] - 0s 20ms/step - loss: 0.4863 - accuracy: 0.8093
-    3/3 [==============================] - 0s 21ms/step - loss: 0.7517 - accuracy: 0.7921
-    3/3 [==============================] - 0s 20ms/step - loss: 0.6966 - accuracy: 0.7921
-    3/3 [==============================] - 0s 19ms/step - loss: 0.6552 - accuracy: 0.8158
-    3/3 [==============================] - 0s 21ms/step - loss: 0.5846 - accuracy: 0.8193
-    2/2 [==============================] - 0s 11ms/step - loss: 0.5662 - accuracy: 0.7491
-    2/2 [==============================] - 0s 16ms/step - loss: 0.6440 - accuracy: 0.7388
-    2/2 [==============================] - 0s 13ms/step - loss: 0.6438 - accuracy: 0.7526
-    2/2 [==============================] - 0s 13ms/step - loss: 0.5750 - accuracy: 0.7539
-    2/2 [==============================] - 0s 12ms/step - loss: 0.6524 - accuracy: 0.7229
-    2/2 [==============================] - 0s 12ms/step - loss: 0.4475 - accuracy: 0.8162
-    2/2 [==============================] - 0s 13ms/step - loss: 0.6101 - accuracy: 0.7766
-    2/2 [==============================] - 0s 13ms/step - loss: 0.7481 - accuracy: 0.7457
-    2/2 [==============================] - 0s 13ms/step - loss: 0.6325 - accuracy: 0.7573
-    2/2 [==============================] - 0s 11ms/step - loss: 0.5401 - accuracy: 0.8107
-    Best: 0.805717 using {'batch_size': 256, 'epochs': 25, 'optimizer': 'adam'}
-    0.783698 (0.009608) with: {'batch_size': 256, 'epochs': 15, 'optimizer': 'adam'}
-    0.805717 (0.011576) with: {'batch_size': 256, 'epochs': 25, 'optimizer': 'adam'}
-    0.743463 (0.011561) with: {'batch_size': 512, 'epochs': 15, 'optimizer': 'adam'}
-    0.781295 (0.028076) with: {'batch_size': 512, 'epochs': 25, 'optimizer': 'adam'}
-    
+
+```python
+'''
+Overview detailed information about the grid search cross-validation process
+'''
+import pandas as pd
+print(pd.DataFrame(grid_result.cv_results_))
+```
 
 
 ```python
@@ -765,67 +836,70 @@ predicted_labels = list(map(lambda x: output_labels[x], result))
 '''
 Plot and confusion metrix
 '''
+import seaborn as sns
+
 # Load output data
 y_pred = predicted_labels
 y_true = y_test
 
 # Plot the confusion matrix
-plot_hm_ct(y_true, y_pred)
+# create a DataFrame from y_true and y_pred
+df = pd.DataFrame({'y_true': y_true, 'y_pred': y_pred})
+
+# create cross-tabulation matrix
+ctab = pd.crosstab(df['y_true'], df['y_pred'])
+
+# create heatmap using seaborn
+sns.heatmap(ctab, annot=True, cmap='Blues', fmt='d')
+
+# add labels and title
+plt.xlabel('Predicted label')
+plt.ylabel('True label')
+plt.title('GridSerachCV result Confusion Matrix')
+
+# show the plot
+plt.show()
 
 # Calculate accuracy score
 from sklearn.metrics import accuracy_score
 accuracy = accuracy_score(y_true, y_pred)
-print("accuracy score:{}".format(accuracy))
+print("GridSerachCV accuracy score:{}".format(accuracy))
 ```
-
-
-    
-![png](water-bottle-dataset-CNNs_files/water-bottle-dataset-CNNs_40_0.png)
-    
-
-
-    accuracy score:0.4924346629986245
-    
 
 
 ```python
 '''
-Overview detailed information about the grid search cross-validation process
+Show a prediction of images from the test set
 '''
-import pandas as pd
-print(pd.DataFrame(grid_result.cv_results_))
+
+import matplotlib.pyplot as plt
+
+# Load the data
+X_test = X_test
+
+# choose 20 random indices
+indices = np.random.randint(0, len(X_test), 20)
+
+# Get 20 sample images
+sample_images = X_test[indices]
+
+# Plot the images
+fig = plt.figure(figsize=(10,10))
+for i, img in enumerate(sample_images):
+    plt.subplot(4, 5, i+1)
+    plt.imshow(img)
+    plt.axis('off')
+    plt.title( y_true[indices[i]] + "\n" + "Predicted result: " + "\n"+ y_pred[indices[i]])
+    
+plt.show()
 ```
 
-       mean_fit_time  std_fit_time  mean_score_time  std_score_time  \
-    0      11.354781      0.504034         0.591065        0.044895   
-    1      21.178699      1.995437         0.580926        0.065402   
-    2      13.947332      4.154452         0.655247        0.076218   
-    3      19.931107      2.818737         0.641331        0.072678   
-    
-      param_batch_size param_epochs param_optimizer  \
-    0              256           15            adam   
-    1              256           25            adam   
-    2              512           15            adam   
-    3              512           25            adam   
-    
-                                                  params  split0_test_score  \
-    0  {'batch_size': 256, 'epochs': 15, 'optimizer':...           0.785223   
-    1  {'batch_size': 256, 'epochs': 25, 'optimizer':...           0.809278   
-    2  {'batch_size': 512, 'epochs': 15, 'optimizer':...           0.749141   
-    3  {'batch_size': 512, 'epochs': 25, 'optimizer':...           0.816151   
-    
-       split1_test_score  split2_test_score  split3_test_score  split4_test_score  \
-    0           0.771478           0.800687           0.779690           0.781411   
-    1           0.792096           0.792096           0.815835           0.819277   
-    2           0.738832           0.752577           0.753873           0.722892   
-    3           0.776632           0.745704           0.757315           0.810671   
-    
-       mean_test_score  std_test_score  rank_test_score  
-    0         0.783698        0.009608                2  
-    1         0.805717        0.011576                1  
-    2         0.743463        0.011561                4  
-    3         0.781295        0.028076                3  
-    
+<a id='summary'></a>
+# Summary
+* CNN model yields higher accuracy while takes slightly same amount of time. 
+* The training loss of CNN model decreased to nearly 0, while the ResNet50 model has more resistance of lowering. Due to the differences in the architectures of the two models. This can be assume that CNN model is overfitting the training data more easier the pre-trained model.
+* GridSearchCV is possible to perform but consuming enormous time and risk of exceeding the memory. Thus, a better approach is to start with a pre-trained model and fine-tune the model to adapt it to our dataset.
+* Overall, our CNN model was able to classify the water level of a given water bottle image with a high degree of accuracy (<85%).
 
 <a id='note'></a>
 # Note
@@ -856,3 +930,6 @@ print(pd.DataFrame(grid_result.cv_results_))
 # [Back to top](#back_to_top)
 
 
+```python
+
+```
