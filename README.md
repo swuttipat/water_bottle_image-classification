@@ -40,7 +40,7 @@
 ### 6. [Hyperparameter Tuning](#hyperparameter_tuning)
 - [GridSearchCV](#gridsearchcv)
 
-##  [Note](#note)
+##  [Note](#note_)
 
 <br><br><br>
 
@@ -1541,7 +1541,7 @@ plt.show()
 * GridSearchCV is possible to perform but consuming enormous time and risk of exceeding the memory. Thus, a better approach is to start with a pre-trained model and fine-tune the model to adapt it to our dataset.
 * Overall, our CNN model was able to classify the water level of a given water bottle image with a high degree of accuracy (<85%).
 
-<a id='note'></a>
+<a id='note_'></a>
 # Note
 #### Improving a machine learning model can be achieved by using various techniques such as:
 * ✅ The techniques that I've applied
