@@ -109,11 +109,12 @@ warnings.filterwarnings('ignore') # Hide all warnings
 
 data = []
 labels = []
-image_size = (128, 128)
+input_size= 64
+image_size = (input_size, input_size)
 
 # Access the directory and sub-directories and so on
-# directory = "water-bottle-dataset"
-directory = "/kaggle/input/water-bottle-dataset"
+directory = "water-bottle-dataset"
+# directory = "/kaggle/input/water-bottle-dataset"
 
 # Extract all images file inside the folders and stored them into list
 for sub_folder in os.listdir(directory):
@@ -141,6 +142,10 @@ print(f'data shape:{data.shape}')
 print(f'labels shape:{labels.shape}')
 ```
 
+    data shape:(486, 64, 64, 3)
+    labels shape:(486,)
+    
+
 
 ```python
 '''
@@ -154,6 +159,12 @@ df.value_counts().plot(kind='bar')
 plt.xticks(rotation = 0) # Rotates X-Axis Ticks by 45-degrees
 plt.show()
 ```
+
+
+    
+![png](water-bottle-images-classification-cnn-resnet50_files/water-bottle-images-classification-cnn-resnet50_11_0.png)
+    
+
 
 ---
 <a id='data_preprocessing'></a>
@@ -250,6 +261,21 @@ df.value_counts()
 
 ```
 
+    data augmented shape : (4654, 64, 64, 3)
+    labels augmented shape : (4654,)
+    
+
+
+
+
+    label            
+    Half water level     1593
+    Full  Water level    1540
+    Overflowing          1521
+    dtype: int64
+
+
+
 
 ```python
 '''
@@ -264,6 +290,12 @@ df.value_counts().plot(kind='bar')
 plt.xticks(rotation = 0) # Rotates X-Axis Ticks by 45-degrees
 plt.show()
 ```
+
+
+    
+![png](water-bottle-images-classification-cnn-resnet50_files/water-bottle-images-classification-cnn-resnet50_15_0.png)
+    
+
 
 #### Train and Test Split
 
@@ -297,6 +329,23 @@ print(f'test_labels shape:{y_test.shape}')
 df = pd.DataFrame({"test_labels":y_test})
 print(df.value_counts())
 ```
+
+    data shape:(3723, 64, 64, 3)
+    labels shape:(3723,)
+    label            
+    Half water level     1286
+    Overflowing          1221
+    Full  Water level    1216
+    dtype: int64
+    
+    test_date shape:(931, 64, 64, 3)
+    test_labels shape:(931,)
+    test_labels      
+    Full  Water level    324
+    Half water level     307
+    Overflowing          300
+    dtype: int64
+    
 
 <a id='nomalizing_images_value'></a>
 #### 2. Nomalizing images value
@@ -334,6 +383,9 @@ for i, label in enumerate(labels):
 print(labels_one_hot[0])
 ```
 
+    [0. 1. 0.]
+    
+
 
 ```python
 '''
@@ -362,6 +414,12 @@ for i, img in enumerate(sample_images):
 plt.show()
 ```
 
+
+    
+![png](water-bottle-images-classification-cnn-resnet50_files/water-bottle-images-classification-cnn-resnet50_24_0.png)
+    
+
+
 #### Generate augmented images files (Optional)
 
 
@@ -387,6 +445,13 @@ for i, image in enumerate(augmented_data):
 '''
 ```
 
+
+
+
+    '\n# Save augmented images to specific directory --- Uncomment to use\n# create new directory to save augmented images\nimport os\n\n# Check existing directory, if not: crate new directory\nif not os.path.exists("augmented_images"):\n    os.makedirs("augmented_images")\n\naugmented_data = data\nlabels = labels\n# loop through each image in the augmented data\nfor i, image in enumerate(augmented_data):\n    # convert the image back to its original form\n    image = (image).astype("uint8")\n    \n    # save the image to the new directory\n    cv2.imwrite(f"augmented_images/augmented_{labels[i]}_{i}.jpeg", image)\n'
+
+
+
 ---
 <a id='machine_learning_model'></a>
 ## Machine Learning Model
@@ -411,6 +476,14 @@ Here is a list of layers available in TensorFlow along with a brief explanation 
 
 
 ```python
+# import tensorflow as tf
+# print("Num GPUs Available: ", len(tf.config.list_physical_devices('GPU')))
+```
+
+
+```python
+# with tf.device('/GPU:0'):
+
 
 import tensorflow as tf
 from tensorflow import keras
@@ -423,21 +496,21 @@ tf.random.set_seed(42)
 
 # Build the model using a Convolutional Neural Network
 model = keras.Sequential([
-    keras.layers.Conv2D(32, (3,3), activation='relu', input_shape=(128,128,3)),
+    keras.layers.Conv2D(32, (3,3), activation='relu', input_shape=(input_size,input_size,3)),
     keras.layers.Conv2D(32, (3,3), activation='relu'),
     keras.layers.MaxPooling2D(2,2),
     keras.layers.Dropout(0.2),
-    
+
     keras.layers.Conv2D(64, (3,3), activation='relu'),
     keras.layers.Conv2D(64, (3,3), activation='relu'),
     keras.layers.MaxPooling2D(2,2),
     keras.layers.Dropout(0.2),
-    
+
     keras.layers.Conv2D(256, (3,3), activation='relu'),
     keras.layers.Conv2D(256, (3,3), activation='relu'),
     keras.layers.MaxPooling2D(2,2),
     keras.layers.Dropout(0.2),
-    
+
     keras.layers.Flatten(),
     keras.layers.Dense(1024, activation='relu'),
     keras.layers.Dropout(0.5),
@@ -451,10 +524,7 @@ model.compile(optimizer=Adam(), loss='categorical_crossentropy', metrics=['accur
 # See an overview of the model architecture and to debug issues related to the model layers.
 model.summary()
 
-```
 
-
-```python
 import time
 start_time = time.time() #To show the training time
 
@@ -485,6 +555,254 @@ print("Training time:", training_time, "seconds")
 self_train_model_time = training_time
 ```
 
+    Model: "sequential"
+    _________________________________________________________________
+     Layer (type)                Output Shape              Param #   
+    =================================================================
+     conv2d (Conv2D)             (None, 62, 62, 32)        896       
+                                                                     
+     conv2d_1 (Conv2D)           (None, 60, 60, 32)        9248      
+                                                                     
+     max_pooling2d (MaxPooling2D  (None, 30, 30, 32)       0         
+     )                                                               
+                                                                     
+     dropout (Dropout)           (None, 30, 30, 32)        0         
+                                                                     
+     conv2d_2 (Conv2D)           (None, 28, 28, 64)        18496     
+                                                                     
+     conv2d_3 (Conv2D)           (None, 26, 26, 64)        36928     
+                                                                     
+     max_pooling2d_1 (MaxPooling  (None, 13, 13, 64)       0         
+     2D)                                                             
+                                                                     
+     dropout_1 (Dropout)         (None, 13, 13, 64)        0         
+                                                                     
+     conv2d_4 (Conv2D)           (None, 11, 11, 256)       147712    
+                                                                     
+     conv2d_5 (Conv2D)           (None, 9, 9, 256)         590080    
+                                                                     
+     max_pooling2d_2 (MaxPooling  (None, 4, 4, 256)        0         
+     2D)                                                             
+                                                                     
+     dropout_2 (Dropout)         (None, 4, 4, 256)         0         
+                                                                     
+     flatten (Flatten)           (None, 4096)              0         
+                                                                     
+     dense (Dense)               (None, 1024)              4195328   
+                                                                     
+     dropout_3 (Dropout)         (None, 1024)              0         
+                                                                     
+     dense_1 (Dense)             (None, 3)                 3075      
+                                                                     
+    =================================================================
+    Total params: 5,001,763
+    Trainable params: 5,001,763
+    Non-trainable params: 0
+    _________________________________________________________________
+    Epoch 1/100
+    12/12 [==============================] - 10s 386ms/step - loss: 1.0854 - accuracy: 0.3697 - val_loss: 1.0768 - val_accuracy: 0.3718
+    Epoch 2/100
+    12/12 [==============================] - 2s 154ms/step - loss: 1.0157 - accuracy: 0.4627 - val_loss: 0.9717 - val_accuracy: 0.5074
+    Epoch 3/100
+    12/12 [==============================] - 2s 154ms/step - loss: 0.9234 - accuracy: 0.5289 - val_loss: 0.9057 - val_accuracy: 0.5530
+    Epoch 4/100
+    12/12 [==============================] - 2s 154ms/step - loss: 0.8520 - accuracy: 0.5682 - val_loss: 0.8133 - val_accuracy: 0.5799
+    Epoch 5/100
+    12/12 [==============================] - 2s 154ms/step - loss: 0.7929 - accuracy: 0.5970 - val_loss: 0.8585 - val_accuracy: 0.5732
+    Epoch 6/100
+    12/12 [==============================] - 2s 154ms/step - loss: 0.7439 - accuracy: 0.6427 - val_loss: 0.7479 - val_accuracy: 0.6295
+    Epoch 7/100
+    12/12 [==============================] - 2s 154ms/step - loss: 0.6914 - accuracy: 0.6961 - val_loss: 0.7470 - val_accuracy: 0.6376
+    Epoch 8/100
+    12/12 [==============================] - 2s 154ms/step - loss: 0.6593 - accuracy: 0.7035 - val_loss: 0.8395 - val_accuracy: 0.6067
+    Epoch 9/100
+    12/12 [==============================] - 2s 154ms/step - loss: 0.6932 - accuracy: 0.6978 - val_loss: 0.7302 - val_accuracy: 0.6685
+    Epoch 10/100
+    12/12 [==============================] - 2s 153ms/step - loss: 0.6246 - accuracy: 0.7354 - val_loss: 0.8526 - val_accuracy: 0.6134
+    Epoch 11/100
+    12/12 [==============================] - 2s 154ms/step - loss: 0.6045 - accuracy: 0.7344 - val_loss: 0.6579 - val_accuracy: 0.7047
+    Epoch 12/100
+    12/12 [==============================] - 2s 154ms/step - loss: 0.5161 - accuracy: 0.7921 - val_loss: 0.6849 - val_accuracy: 0.7168
+    Epoch 13/100
+    12/12 [==============================] - 2s 154ms/step - loss: 0.5109 - accuracy: 0.7931 - val_loss: 0.6319 - val_accuracy: 0.7477
+    Epoch 14/100
+    12/12 [==============================] - 2s 153ms/step - loss: 0.4569 - accuracy: 0.8143 - val_loss: 0.5747 - val_accuracy: 0.7745
+    Epoch 15/100
+    12/12 [==============================] - 2s 154ms/step - loss: 0.4255 - accuracy: 0.8345 - val_loss: 0.4991 - val_accuracy: 0.7973
+    Epoch 16/100
+    12/12 [==============================] - 2s 153ms/step - loss: 0.4354 - accuracy: 0.8146 - val_loss: 0.5495 - val_accuracy: 0.7597
+    Epoch 17/100
+    12/12 [==============================] - 2s 154ms/step - loss: 0.3852 - accuracy: 0.8526 - val_loss: 0.5405 - val_accuracy: 0.7678
+    Epoch 18/100
+    12/12 [==============================] - 2s 155ms/step - loss: 0.3858 - accuracy: 0.8479 - val_loss: 0.4992 - val_accuracy: 0.7960
+    Epoch 19/100
+    12/12 [==============================] - 2s 154ms/step - loss: 0.3419 - accuracy: 0.8694 - val_loss: 0.5731 - val_accuracy: 0.7852
+    Epoch 20/100
+    12/12 [==============================] - 2s 154ms/step - loss: 0.3569 - accuracy: 0.8647 - val_loss: 0.4998 - val_accuracy: 0.7973
+    Epoch 21/100
+    12/12 [==============================] - 2s 154ms/step - loss: 0.3175 - accuracy: 0.8751 - val_loss: 0.5312 - val_accuracy: 0.8013
+    Epoch 22/100
+    12/12 [==============================] - 2s 154ms/step - loss: 0.2966 - accuracy: 0.8858 - val_loss: 0.4707 - val_accuracy: 0.8134
+    Epoch 23/100
+    12/12 [==============================] - 2s 154ms/step - loss: 0.3120 - accuracy: 0.8811 - val_loss: 0.3677 - val_accuracy: 0.8631
+    Epoch 24/100
+    12/12 [==============================] - 2s 154ms/step - loss: 0.2435 - accuracy: 0.9097 - val_loss: 0.3664 - val_accuracy: 0.8604
+    Epoch 25/100
+    12/12 [==============================] - 2s 154ms/step - loss: 0.2041 - accuracy: 0.9275 - val_loss: 0.4797 - val_accuracy: 0.8309
+    Epoch 26/100
+    12/12 [==============================] - 2s 154ms/step - loss: 0.1849 - accuracy: 0.9308 - val_loss: 0.3029 - val_accuracy: 0.8872
+    Epoch 27/100
+    12/12 [==============================] - 2s 154ms/step - loss: 0.1891 - accuracy: 0.9268 - val_loss: 0.4197 - val_accuracy: 0.8550
+    Epoch 28/100
+    12/12 [==============================] - 2s 154ms/step - loss: 0.1535 - accuracy: 0.9476 - val_loss: 0.3267 - val_accuracy: 0.8832
+    Epoch 29/100
+    12/12 [==============================] - 2s 154ms/step - loss: 0.1235 - accuracy: 0.9557 - val_loss: 0.3098 - val_accuracy: 0.8886
+    Epoch 30/100
+    12/12 [==============================] - 2s 155ms/step - loss: 0.1263 - accuracy: 0.9520 - val_loss: 0.3222 - val_accuracy: 0.8886
+    Epoch 31/100
+    12/12 [==============================] - 2s 155ms/step - loss: 0.1164 - accuracy: 0.9584 - val_loss: 0.4111 - val_accuracy: 0.8738
+    Epoch 32/100
+    12/12 [==============================] - 2s 154ms/step - loss: 0.1203 - accuracy: 0.9557 - val_loss: 0.4365 - val_accuracy: 0.8631
+    Epoch 33/100
+    12/12 [==============================] - 2s 154ms/step - loss: 0.1409 - accuracy: 0.9469 - val_loss: 0.4134 - val_accuracy: 0.8805
+    Epoch 34/100
+    12/12 [==============================] - 2s 155ms/step - loss: 0.1360 - accuracy: 0.9500 - val_loss: 0.4742 - val_accuracy: 0.8497
+    Epoch 35/100
+    12/12 [==============================] - 2s 155ms/step - loss: 0.1204 - accuracy: 0.9624 - val_loss: 0.3545 - val_accuracy: 0.8859
+    Epoch 36/100
+    12/12 [==============================] - 2s 155ms/step - loss: 0.0963 - accuracy: 0.9644 - val_loss: 0.3700 - val_accuracy: 0.8899
+    Epoch 37/100
+    12/12 [==============================] - 2s 154ms/step - loss: 0.0839 - accuracy: 0.9688 - val_loss: 0.3685 - val_accuracy: 0.8940
+    Epoch 38/100
+    12/12 [==============================] - 2s 156ms/step - loss: 0.0841 - accuracy: 0.9708 - val_loss: 0.3871 - val_accuracy: 0.8953
+    Epoch 39/100
+    12/12 [==============================] - 2s 154ms/step - loss: 0.1053 - accuracy: 0.9607 - val_loss: 0.3993 - val_accuracy: 0.8819
+    Epoch 40/100
+    12/12 [==============================] - 2s 154ms/step - loss: 0.1050 - accuracy: 0.9607 - val_loss: 0.3446 - val_accuracy: 0.9047
+    Epoch 41/100
+    12/12 [==============================] - 2s 154ms/step - loss: 0.0832 - accuracy: 0.9708 - val_loss: 0.2699 - val_accuracy: 0.9315
+    Epoch 42/100
+    12/12 [==============================] - 2s 154ms/step - loss: 0.0540 - accuracy: 0.9795 - val_loss: 0.3137 - val_accuracy: 0.9128
+    Epoch 43/100
+    12/12 [==============================] - 2s 154ms/step - loss: 0.0514 - accuracy: 0.9842 - val_loss: 0.3877 - val_accuracy: 0.9060
+    Epoch 44/100
+    12/12 [==============================] - 2s 154ms/step - loss: 0.0501 - accuracy: 0.9809 - val_loss: 0.3718 - val_accuracy: 0.9128
+    Epoch 45/100
+    12/12 [==============================] - 2s 154ms/step - loss: 0.0764 - accuracy: 0.9741 - val_loss: 0.4866 - val_accuracy: 0.8819
+    Epoch 46/100
+    12/12 [==============================] - 2s 155ms/step - loss: 0.0916 - accuracy: 0.9701 - val_loss: 0.2959 - val_accuracy: 0.9235
+    Epoch 47/100
+    12/12 [==============================] - 2s 155ms/step - loss: 0.0660 - accuracy: 0.9785 - val_loss: 0.3034 - val_accuracy: 0.9221
+    Epoch 48/100
+    12/12 [==============================] - 2s 155ms/step - loss: 0.0504 - accuracy: 0.9839 - val_loss: 0.4241 - val_accuracy: 0.8913
+    Epoch 49/100
+    12/12 [==============================] - 2s 155ms/step - loss: 0.0413 - accuracy: 0.9849 - val_loss: 0.3278 - val_accuracy: 0.9195
+    Epoch 50/100
+    12/12 [==============================] - 2s 155ms/step - loss: 0.0456 - accuracy: 0.9842 - val_loss: 0.3222 - val_accuracy: 0.9128
+    Epoch 51/100
+    12/12 [==============================] - 2s 155ms/step - loss: 0.0506 - accuracy: 0.9815 - val_loss: 0.3277 - val_accuracy: 0.9248
+    Epoch 52/100
+    12/12 [==============================] - 2s 155ms/step - loss: 0.0436 - accuracy: 0.9835 - val_loss: 0.3649 - val_accuracy: 0.9034
+    Epoch 53/100
+    12/12 [==============================] - 2s 155ms/step - loss: 0.0607 - accuracy: 0.9775 - val_loss: 0.3235 - val_accuracy: 0.9154
+    Epoch 54/100
+    12/12 [==============================] - 2s 155ms/step - loss: 0.0438 - accuracy: 0.9862 - val_loss: 0.3182 - val_accuracy: 0.9181
+    Epoch 55/100
+    12/12 [==============================] - 2s 156ms/step - loss: 0.0401 - accuracy: 0.9872 - val_loss: 0.3151 - val_accuracy: 0.9181
+    Epoch 56/100
+    12/12 [==============================] - 2s 155ms/step - loss: 0.0312 - accuracy: 0.9889 - val_loss: 0.3654 - val_accuracy: 0.9221
+    Epoch 57/100
+    12/12 [==============================] - 2s 155ms/step - loss: 0.0215 - accuracy: 0.9916 - val_loss: 0.2842 - val_accuracy: 0.9329
+    Epoch 58/100
+    12/12 [==============================] - 2s 155ms/step - loss: 0.0208 - accuracy: 0.9936 - val_loss: 0.3318 - val_accuracy: 0.9275
+    Epoch 59/100
+    12/12 [==============================] - 2s 155ms/step - loss: 0.0222 - accuracy: 0.9919 - val_loss: 0.3533 - val_accuracy: 0.9248
+    Epoch 60/100
+    12/12 [==============================] - 2s 155ms/step - loss: 0.0174 - accuracy: 0.9936 - val_loss: 0.4218 - val_accuracy: 0.9195
+    Epoch 61/100
+    12/12 [==============================] - 2s 155ms/step - loss: 0.0390 - accuracy: 0.9879 - val_loss: 0.3938 - val_accuracy: 0.9060
+    Epoch 62/100
+    12/12 [==============================] - 2s 154ms/step - loss: 0.0429 - accuracy: 0.9886 - val_loss: 0.4399 - val_accuracy: 0.9141
+    Epoch 63/100
+    12/12 [==============================] - 2s 154ms/step - loss: 0.0334 - accuracy: 0.9899 - val_loss: 0.3707 - val_accuracy: 0.9262
+    Epoch 64/100
+    12/12 [==============================] - 2s 155ms/step - loss: 0.0271 - accuracy: 0.9906 - val_loss: 0.4102 - val_accuracy: 0.9181
+    Epoch 65/100
+    12/12 [==============================] - 2s 155ms/step - loss: 0.0241 - accuracy: 0.9923 - val_loss: 0.3961 - val_accuracy: 0.9168
+    Epoch 66/100
+    12/12 [==============================] - 2s 155ms/step - loss: 0.0207 - accuracy: 0.9943 - val_loss: 0.3672 - val_accuracy: 0.9208
+    Epoch 67/100
+    12/12 [==============================] - 2s 155ms/step - loss: 0.0413 - accuracy: 0.9866 - val_loss: 0.6178 - val_accuracy: 0.8832
+    Epoch 68/100
+    12/12 [==============================] - 2s 155ms/step - loss: 0.0470 - accuracy: 0.9835 - val_loss: 0.4435 - val_accuracy: 0.8980
+    Epoch 69/100
+    12/12 [==============================] - 2s 155ms/step - loss: 0.0806 - accuracy: 0.9741 - val_loss: 0.3334 - val_accuracy: 0.9101
+    Epoch 70/100
+    12/12 [==============================] - 2s 155ms/step - loss: 0.0937 - accuracy: 0.9718 - val_loss: 0.3592 - val_accuracy: 0.8993
+    Epoch 71/100
+    12/12 [==============================] - 2s 155ms/step - loss: 0.0421 - accuracy: 0.9862 - val_loss: 0.3487 - val_accuracy: 0.9154
+    Epoch 72/100
+    12/12 [==============================] - 2s 155ms/step - loss: 0.0220 - accuracy: 0.9926 - val_loss: 0.3466 - val_accuracy: 0.9195
+    Epoch 73/100
+    12/12 [==============================] - 2s 155ms/step - loss: 0.0173 - accuracy: 0.9943 - val_loss: 0.3487 - val_accuracy: 0.9235
+    Epoch 74/100
+    12/12 [==============================] - 2s 155ms/step - loss: 0.0192 - accuracy: 0.9906 - val_loss: 0.4393 - val_accuracy: 0.9114
+    Epoch 75/100
+    12/12 [==============================] - 2s 155ms/step - loss: 0.0252 - accuracy: 0.9899 - val_loss: 0.4039 - val_accuracy: 0.9248
+    Epoch 76/100
+    12/12 [==============================] - 2s 155ms/step - loss: 0.0300 - accuracy: 0.9893 - val_loss: 0.4018 - val_accuracy: 0.9154
+    Epoch 77/100
+    12/12 [==============================] - 2s 155ms/step - loss: 0.0188 - accuracy: 0.9943 - val_loss: 0.4720 - val_accuracy: 0.9168
+    Epoch 78/100
+    12/12 [==============================] - 2s 155ms/step - loss: 0.0271 - accuracy: 0.9913 - val_loss: 0.3789 - val_accuracy: 0.9154
+    Epoch 79/100
+    12/12 [==============================] - 2s 155ms/step - loss: 0.0270 - accuracy: 0.9909 - val_loss: 0.5809 - val_accuracy: 0.8779
+    Epoch 80/100
+    12/12 [==============================] - 2s 154ms/step - loss: 0.0385 - accuracy: 0.9876 - val_loss: 0.4402 - val_accuracy: 0.9101
+    Epoch 81/100
+    12/12 [==============================] - 2s 155ms/step - loss: 0.0360 - accuracy: 0.9859 - val_loss: 0.3424 - val_accuracy: 0.9221
+    Epoch 82/100
+    12/12 [==============================] - 2s 155ms/step - loss: 0.0261 - accuracy: 0.9909 - val_loss: 0.3282 - val_accuracy: 0.9208
+    Epoch 83/100
+    12/12 [==============================] - 2s 155ms/step - loss: 0.0217 - accuracy: 0.9946 - val_loss: 0.4499 - val_accuracy: 0.9248
+    Epoch 84/100
+    12/12 [==============================] - 2s 155ms/step - loss: 0.0293 - accuracy: 0.9893 - val_loss: 0.4104 - val_accuracy: 0.9168
+    Epoch 85/100
+    12/12 [==============================] - 2s 155ms/step - loss: 0.0234 - accuracy: 0.9899 - val_loss: 0.4264 - val_accuracy: 0.9074
+    Epoch 86/100
+    12/12 [==============================] - 2s 155ms/step - loss: 0.0359 - accuracy: 0.9862 - val_loss: 0.5206 - val_accuracy: 0.9034
+    Epoch 87/100
+    12/12 [==============================] - 2s 155ms/step - loss: 0.0469 - accuracy: 0.9852 - val_loss: 0.3823 - val_accuracy: 0.9154
+    Epoch 88/100
+    12/12 [==============================] - 2s 155ms/step - loss: 0.0333 - accuracy: 0.9903 - val_loss: 0.4379 - val_accuracy: 0.9128
+    Epoch 89/100
+    12/12 [==============================] - 2s 155ms/step - loss: 0.0209 - accuracy: 0.9943 - val_loss: 0.3844 - val_accuracy: 0.9114
+    Epoch 90/100
+    12/12 [==============================] - 2s 155ms/step - loss: 0.0139 - accuracy: 0.9953 - val_loss: 0.3223 - val_accuracy: 0.9315
+    Epoch 91/100
+    12/12 [==============================] - 2s 155ms/step - loss: 0.0109 - accuracy: 0.9966 - val_loss: 0.4084 - val_accuracy: 0.9168
+    Epoch 92/100
+    12/12 [==============================] - 2s 156ms/step - loss: 0.0050 - accuracy: 0.9976 - val_loss: 0.3810 - val_accuracy: 0.9289
+    Epoch 93/100
+    12/12 [==============================] - 2s 155ms/step - loss: 0.0049 - accuracy: 0.9997 - val_loss: 0.3815 - val_accuracy: 0.9356
+    Epoch 94/100
+    12/12 [==============================] - 2s 155ms/step - loss: 0.0043 - accuracy: 0.9987 - val_loss: 0.3919 - val_accuracy: 0.9342
+    Epoch 95/100
+    12/12 [==============================] - 2s 155ms/step - loss: 0.0024 - accuracy: 0.9993 - val_loss: 0.4191 - val_accuracy: 0.9356
+    Epoch 96/100
+    12/12 [==============================] - 2s 155ms/step - loss: 0.0023 - accuracy: 0.9993 - val_loss: 0.4122 - val_accuracy: 0.9302
+    Epoch 97/100
+    12/12 [==============================] - 2s 155ms/step - loss: 0.0063 - accuracy: 0.9983 - val_loss: 0.4574 - val_accuracy: 0.9275
+    Epoch 98/100
+    12/12 [==============================] - 2s 155ms/step - loss: 0.0157 - accuracy: 0.9980 - val_loss: 0.3963 - val_accuracy: 0.9369
+    Epoch 99/100
+    12/12 [==============================] - 2s 157ms/step - loss: 0.0100 - accuracy: 0.9963 - val_loss: 0.4040 - val_accuracy: 0.9302
+    Epoch 100/100
+    12/12 [==============================] - 2s 155ms/step - loss: 0.0050 - accuracy: 0.9997 - val_loss: 0.4285 - val_accuracy: 0.9195
+    Test accuracy:  0.9369127750396729
+    Training time: 192.84626126289368 seconds
+    
+
 <a id='resnet50'></a>
 ### Modified ResNet50
 
@@ -504,7 +822,7 @@ y=labels_one_hot
 tf.random.set_seed(42)
 
 # Load pre-trained ResNet50 model
-resnet = ResNet50(include_top=False, input_shape=(128, 128, 3))
+resnet = ResNet50(include_top=False, input_shape=(input_size, input_size, 3))
 
 # Freeze layers in ResNet50 model
 for layer in resnet.layers:
@@ -536,6 +854,210 @@ print("Training time:", training_time, "seconds")
 
 pre_train_model_time = training_time
 ```
+
+    Epoch 1/100
+    12/12 [==============================] - 10s 442ms/step - loss: 1.1283 - accuracy: 0.3687 - val_loss: 1.0435 - val_accuracy: 0.4456
+    Epoch 2/100
+    12/12 [==============================] - 2s 153ms/step - loss: 1.0261 - accuracy: 0.4859 - val_loss: 0.9994 - val_accuracy: 0.5101
+    Epoch 3/100
+    12/12 [==============================] - 2s 152ms/step - loss: 0.9938 - accuracy: 0.5238 - val_loss: 0.9679 - val_accuracy: 0.5262
+    Epoch 4/100
+    12/12 [==============================] - 2s 152ms/step - loss: 0.9673 - accuracy: 0.5426 - val_loss: 0.9606 - val_accuracy: 0.5651
+    Epoch 5/100
+    12/12 [==============================] - 2s 152ms/step - loss: 0.9427 - accuracy: 0.5651 - val_loss: 0.9426 - val_accuracy: 0.5517
+    Epoch 6/100
+    12/12 [==============================] - 2s 153ms/step - loss: 0.9276 - accuracy: 0.5702 - val_loss: 0.9156 - val_accuracy: 0.5544
+    Epoch 7/100
+    12/12 [==============================] - 2s 153ms/step - loss: 0.9058 - accuracy: 0.5870 - val_loss: 0.8981 - val_accuracy: 0.5745
+    Epoch 8/100
+    12/12 [==============================] - 2s 153ms/step - loss: 0.8916 - accuracy: 0.5977 - val_loss: 0.8903 - val_accuracy: 0.6067
+    Epoch 9/100
+    12/12 [==============================] - 2s 152ms/step - loss: 0.8800 - accuracy: 0.6111 - val_loss: 0.8926 - val_accuracy: 0.5624
+    Epoch 10/100
+    12/12 [==============================] - 2s 153ms/step - loss: 0.8767 - accuracy: 0.5913 - val_loss: 0.8859 - val_accuracy: 0.5919
+    Epoch 11/100
+    12/12 [==============================] - 3s 276ms/step - loss: 0.8604 - accuracy: 0.6179 - val_loss: 0.8598 - val_accuracy: 0.6188
+    Epoch 12/100
+    12/12 [==============================] - 3s 275ms/step - loss: 0.8440 - accuracy: 0.6316 - val_loss: 0.8631 - val_accuracy: 0.6148
+    Epoch 13/100
+    12/12 [==============================] - 2s 152ms/step - loss: 0.8507 - accuracy: 0.6242 - val_loss: 0.8599 - val_accuracy: 0.6054
+    Epoch 14/100
+    12/12 [==============================] - 2s 151ms/step - loss: 0.8292 - accuracy: 0.6397 - val_loss: 0.8499 - val_accuracy: 0.6174
+    Epoch 15/100
+    12/12 [==============================] - 2s 153ms/step - loss: 0.8223 - accuracy: 0.6414 - val_loss: 0.8522 - val_accuracy: 0.6148
+    Epoch 16/100
+    12/12 [==============================] - 2s 152ms/step - loss: 0.8141 - accuracy: 0.6444 - val_loss: 0.8539 - val_accuracy: 0.6242
+    Epoch 17/100
+    12/12 [==============================] - 2s 151ms/step - loss: 0.8186 - accuracy: 0.6323 - val_loss: 0.8625 - val_accuracy: 0.5826
+    Epoch 18/100
+    12/12 [==============================] - 2s 153ms/step - loss: 0.8229 - accuracy: 0.6310 - val_loss: 0.8526 - val_accuracy: 0.6174
+    Epoch 19/100
+    12/12 [==============================] - 2s 151ms/step - loss: 0.7947 - accuracy: 0.6521 - val_loss: 0.8197 - val_accuracy: 0.6268
+    Epoch 20/100
+    12/12 [==============================] - 2s 152ms/step - loss: 0.7887 - accuracy: 0.6545 - val_loss: 0.8048 - val_accuracy: 0.6497
+    Epoch 21/100
+    12/12 [==============================] - 2s 152ms/step - loss: 0.7747 - accuracy: 0.6649 - val_loss: 0.8082 - val_accuracy: 0.6591
+    Epoch 22/100
+    12/12 [==============================] - 2s 152ms/step - loss: 0.7752 - accuracy: 0.6672 - val_loss: 0.8409 - val_accuracy: 0.5919
+    Epoch 23/100
+    12/12 [==============================] - 2s 152ms/step - loss: 0.7936 - accuracy: 0.6447 - val_loss: 0.8322 - val_accuracy: 0.6174
+    Epoch 24/100
+    12/12 [==============================] - 2s 152ms/step - loss: 0.7781 - accuracy: 0.6575 - val_loss: 0.8119 - val_accuracy: 0.6255
+    Epoch 25/100
+    12/12 [==============================] - 2s 152ms/step - loss: 0.7642 - accuracy: 0.6716 - val_loss: 0.8102 - val_accuracy: 0.6564
+    Epoch 26/100
+    12/12 [==============================] - 2s 152ms/step - loss: 0.7543 - accuracy: 0.6770 - val_loss: 0.7896 - val_accuracy: 0.6537
+    Epoch 27/100
+    12/12 [==============================] - 2s 152ms/step - loss: 0.7497 - accuracy: 0.6733 - val_loss: 0.8032 - val_accuracy: 0.6362
+    Epoch 28/100
+    12/12 [==============================] - 2s 151ms/step - loss: 0.7462 - accuracy: 0.6860 - val_loss: 0.7868 - val_accuracy: 0.6443
+    Epoch 29/100
+    12/12 [==============================] - 2s 153ms/step - loss: 0.7457 - accuracy: 0.6706 - val_loss: 0.7874 - val_accuracy: 0.6658
+    Epoch 30/100
+    12/12 [==============================] - 2s 151ms/step - loss: 0.7449 - accuracy: 0.6807 - val_loss: 0.8166 - val_accuracy: 0.6309
+    Epoch 31/100
+    12/12 [==============================] - 2s 151ms/step - loss: 0.7400 - accuracy: 0.6850 - val_loss: 0.8239 - val_accuracy: 0.6362
+    Epoch 32/100
+    12/12 [==============================] - 2s 152ms/step - loss: 0.7375 - accuracy: 0.6914 - val_loss: 0.7729 - val_accuracy: 0.6577
+    Epoch 33/100
+    12/12 [==============================] - 2s 152ms/step - loss: 0.7290 - accuracy: 0.6807 - val_loss: 0.7732 - val_accuracy: 0.6497
+    Epoch 34/100
+    12/12 [==============================] - 2s 152ms/step - loss: 0.7227 - accuracy: 0.6917 - val_loss: 0.7835 - val_accuracy: 0.6564
+    Epoch 35/100
+    12/12 [==============================] - 2s 152ms/step - loss: 0.7258 - accuracy: 0.6914 - val_loss: 0.7860 - val_accuracy: 0.6738
+    Epoch 36/100
+    12/12 [==============================] - 2s 151ms/step - loss: 0.7167 - accuracy: 0.6961 - val_loss: 0.7624 - val_accuracy: 0.6698
+    Epoch 37/100
+    12/12 [==============================] - 2s 152ms/step - loss: 0.7118 - accuracy: 0.7005 - val_loss: 0.7671 - val_accuracy: 0.6550
+    Epoch 38/100
+    12/12 [==============================] - 2s 153ms/step - loss: 0.7063 - accuracy: 0.6998 - val_loss: 0.7665 - val_accuracy: 0.6765
+    Epoch 39/100
+    12/12 [==============================] - 2s 154ms/step - loss: 0.7021 - accuracy: 0.7042 - val_loss: 0.7627 - val_accuracy: 0.6617
+    Epoch 40/100
+    12/12 [==============================] - 2s 152ms/step - loss: 0.7253 - accuracy: 0.6793 - val_loss: 0.7695 - val_accuracy: 0.6738
+    Epoch 41/100
+    12/12 [==============================] - 2s 152ms/step - loss: 0.7094 - accuracy: 0.6961 - val_loss: 0.7942 - val_accuracy: 0.6483
+    Epoch 42/100
+    12/12 [==============================] - 2s 152ms/step - loss: 0.7127 - accuracy: 0.6864 - val_loss: 0.8021 - val_accuracy: 0.6376
+    Epoch 43/100
+    12/12 [==============================] - 2s 152ms/step - loss: 0.7161 - accuracy: 0.6891 - val_loss: 0.7745 - val_accuracy: 0.6779
+    Epoch 44/100
+    12/12 [==============================] - 2s 152ms/step - loss: 0.7116 - accuracy: 0.6924 - val_loss: 0.7792 - val_accuracy: 0.6456
+    Epoch 45/100
+    12/12 [==============================] - 2s 153ms/step - loss: 0.7314 - accuracy: 0.6850 - val_loss: 0.7661 - val_accuracy: 0.6483
+    Epoch 46/100
+    12/12 [==============================] - 2s 152ms/step - loss: 0.7181 - accuracy: 0.6897 - val_loss: 0.8038 - val_accuracy: 0.6658
+    Epoch 47/100
+    12/12 [==============================] - 2s 153ms/step - loss: 0.7043 - accuracy: 0.6917 - val_loss: 0.7489 - val_accuracy: 0.6779
+    Epoch 48/100
+    12/12 [==============================] - 2s 152ms/step - loss: 0.6876 - accuracy: 0.7055 - val_loss: 0.7510 - val_accuracy: 0.6725
+    Epoch 49/100
+    12/12 [==============================] - 2s 152ms/step - loss: 0.6800 - accuracy: 0.7156 - val_loss: 0.7548 - val_accuracy: 0.6698
+    Epoch 50/100
+    12/12 [==============================] - 2s 152ms/step - loss: 0.6928 - accuracy: 0.7042 - val_loss: 0.7793 - val_accuracy: 0.6752
+    Epoch 51/100
+    12/12 [==============================] - 2s 153ms/step - loss: 0.6972 - accuracy: 0.7015 - val_loss: 0.7522 - val_accuracy: 0.6658
+    Epoch 52/100
+    12/12 [==============================] - 2s 153ms/step - loss: 0.6816 - accuracy: 0.7095 - val_loss: 0.7608 - val_accuracy: 0.6685
+    Epoch 53/100
+    12/12 [==============================] - 2s 152ms/step - loss: 0.6865 - accuracy: 0.7021 - val_loss: 0.7491 - val_accuracy: 0.6738
+    Epoch 54/100
+    12/12 [==============================] - 2s 152ms/step - loss: 0.6762 - accuracy: 0.7179 - val_loss: 0.7586 - val_accuracy: 0.6577
+    Epoch 55/100
+    12/12 [==============================] - 2s 153ms/step - loss: 0.6831 - accuracy: 0.7095 - val_loss: 0.7353 - val_accuracy: 0.6725
+    Epoch 56/100
+    12/12 [==============================] - 2s 152ms/step - loss: 0.6834 - accuracy: 0.7109 - val_loss: 0.8334 - val_accuracy: 0.6174
+    Epoch 57/100
+    12/12 [==============================] - 2s 152ms/step - loss: 0.6739 - accuracy: 0.7058 - val_loss: 0.7372 - val_accuracy: 0.6846
+    Epoch 58/100
+    12/12 [==============================] - 2s 154ms/step - loss: 0.6675 - accuracy: 0.7072 - val_loss: 0.7858 - val_accuracy: 0.6698
+    Epoch 59/100
+    12/12 [==============================] - 2s 155ms/step - loss: 0.6700 - accuracy: 0.7193 - val_loss: 0.7440 - val_accuracy: 0.6671
+    Epoch 60/100
+    12/12 [==============================] - 2s 154ms/step - loss: 0.6590 - accuracy: 0.7186 - val_loss: 0.7935 - val_accuracy: 0.6550
+    Epoch 61/100
+    12/12 [==============================] - 2s 155ms/step - loss: 0.6756 - accuracy: 0.7032 - val_loss: 0.7417 - val_accuracy: 0.6805
+    Epoch 62/100
+    12/12 [==============================] - 2s 155ms/step - loss: 0.6641 - accuracy: 0.7173 - val_loss: 0.7343 - val_accuracy: 0.6725
+    Epoch 63/100
+    12/12 [==============================] - 2s 153ms/step - loss: 0.6612 - accuracy: 0.7152 - val_loss: 0.7527 - val_accuracy: 0.6658
+    Epoch 64/100
+    12/12 [==============================] - 2s 212ms/step - loss: 0.6648 - accuracy: 0.7112 - val_loss: 0.7389 - val_accuracy: 0.6711
+    Epoch 65/100
+    12/12 [==============================] - 4s 309ms/step - loss: 0.6485 - accuracy: 0.7287 - val_loss: 0.7303 - val_accuracy: 0.6846
+    Epoch 66/100
+    12/12 [==============================] - 2s 155ms/step - loss: 0.6438 - accuracy: 0.7277 - val_loss: 0.7634 - val_accuracy: 0.6805
+    Epoch 67/100
+    12/12 [==============================] - 2s 154ms/step - loss: 0.6539 - accuracy: 0.7210 - val_loss: 0.7342 - val_accuracy: 0.6819
+    Epoch 68/100
+    12/12 [==============================] - 2s 153ms/step - loss: 0.6381 - accuracy: 0.7300 - val_loss: 0.7289 - val_accuracy: 0.6859
+    Epoch 69/100
+    12/12 [==============================] - 2s 153ms/step - loss: 0.6408 - accuracy: 0.7314 - val_loss: 0.7469 - val_accuracy: 0.6765
+    Epoch 70/100
+    12/12 [==============================] - 2s 153ms/step - loss: 0.6471 - accuracy: 0.7169 - val_loss: 0.7575 - val_accuracy: 0.6832
+    Epoch 71/100
+    12/12 [==============================] - 2s 152ms/step - loss: 0.6391 - accuracy: 0.7314 - val_loss: 0.7258 - val_accuracy: 0.6886
+    Epoch 72/100
+    12/12 [==============================] - 2s 153ms/step - loss: 0.6421 - accuracy: 0.7250 - val_loss: 0.7683 - val_accuracy: 0.6644
+    Epoch 73/100
+    12/12 [==============================] - 2s 154ms/step - loss: 0.6458 - accuracy: 0.7183 - val_loss: 0.8089 - val_accuracy: 0.6416
+    Epoch 74/100
+    12/12 [==============================] - 2s 152ms/step - loss: 0.6663 - accuracy: 0.7082 - val_loss: 0.7902 - val_accuracy: 0.6309
+    Epoch 75/100
+    12/12 [==============================] - 2s 152ms/step - loss: 0.6519 - accuracy: 0.7159 - val_loss: 0.7344 - val_accuracy: 0.6846
+    Epoch 76/100
+    12/12 [==============================] - 2s 154ms/step - loss: 0.6451 - accuracy: 0.7304 - val_loss: 0.7524 - val_accuracy: 0.6711
+    Epoch 77/100
+    12/12 [==============================] - 2s 152ms/step - loss: 0.6408 - accuracy: 0.7220 - val_loss: 0.7237 - val_accuracy: 0.6779
+    Epoch 78/100
+    12/12 [==============================] - 2s 152ms/step - loss: 0.6355 - accuracy: 0.7267 - val_loss: 0.7404 - val_accuracy: 0.6725
+    Epoch 79/100
+    12/12 [==============================] - 2s 153ms/step - loss: 0.6381 - accuracy: 0.7361 - val_loss: 0.7180 - val_accuracy: 0.6711
+    Epoch 80/100
+    12/12 [==============================] - 2s 154ms/step - loss: 0.6231 - accuracy: 0.7384 - val_loss: 0.7173 - val_accuracy: 0.6886
+    Epoch 81/100
+    12/12 [==============================] - 2s 153ms/step - loss: 0.6170 - accuracy: 0.7448 - val_loss: 0.7217 - val_accuracy: 0.6913
+    Epoch 82/100
+    12/12 [==============================] - 2s 151ms/step - loss: 0.6200 - accuracy: 0.7381 - val_loss: 0.7314 - val_accuracy: 0.7034
+    Epoch 83/100
+    12/12 [==============================] - 2s 151ms/step - loss: 0.6379 - accuracy: 0.7273 - val_loss: 0.7134 - val_accuracy: 0.6886
+    Epoch 84/100
+    12/12 [==============================] - 2s 152ms/step - loss: 0.6195 - accuracy: 0.7404 - val_loss: 0.7271 - val_accuracy: 0.6779
+    Epoch 85/100
+    12/12 [==============================] - 2s 152ms/step - loss: 0.6154 - accuracy: 0.7478 - val_loss: 0.7164 - val_accuracy: 0.6980
+    Epoch 86/100
+    12/12 [==============================] - 2s 152ms/step - loss: 0.6103 - accuracy: 0.7475 - val_loss: 0.7128 - val_accuracy: 0.6940
+    Epoch 87/100
+    12/12 [==============================] - 2s 152ms/step - loss: 0.6196 - accuracy: 0.7391 - val_loss: 0.7269 - val_accuracy: 0.6738
+    Epoch 88/100
+    12/12 [==============================] - 2s 152ms/step - loss: 0.6183 - accuracy: 0.7314 - val_loss: 0.7686 - val_accuracy: 0.6537
+    Epoch 89/100
+    12/12 [==============================] - 2s 151ms/step - loss: 0.6244 - accuracy: 0.7297 - val_loss: 0.7362 - val_accuracy: 0.6671
+    Epoch 90/100
+    12/12 [==============================] - 2s 151ms/step - loss: 0.6187 - accuracy: 0.7367 - val_loss: 0.7382 - val_accuracy: 0.7020
+    Epoch 91/100
+    12/12 [==============================] - 2s 152ms/step - loss: 0.6069 - accuracy: 0.7424 - val_loss: 0.7694 - val_accuracy: 0.6819
+    Epoch 92/100
+    12/12 [==============================] - 2s 151ms/step - loss: 0.6138 - accuracy: 0.7381 - val_loss: 0.7254 - val_accuracy: 0.6926
+    Epoch 93/100
+    12/12 [==============================] - 2s 152ms/step - loss: 0.6104 - accuracy: 0.7421 - val_loss: 0.7457 - val_accuracy: 0.6846
+    Epoch 94/100
+    12/12 [==============================] - 2s 151ms/step - loss: 0.6231 - accuracy: 0.7445 - val_loss: 0.7563 - val_accuracy: 0.6872
+    Epoch 95/100
+    12/12 [==============================] - 2s 151ms/step - loss: 0.6085 - accuracy: 0.7424 - val_loss: 0.7283 - val_accuracy: 0.6886
+    Epoch 96/100
+    12/12 [==============================] - 2s 153ms/step - loss: 0.6019 - accuracy: 0.7448 - val_loss: 0.7215 - val_accuracy: 0.7047
+    Epoch 97/100
+    12/12 [==============================] - 2s 152ms/step - loss: 0.5973 - accuracy: 0.7562 - val_loss: 0.7376 - val_accuracy: 0.6779
+    Epoch 98/100
+    12/12 [==============================] - 2s 153ms/step - loss: 0.6313 - accuracy: 0.7297 - val_loss: 0.7343 - val_accuracy: 0.6738
+    Epoch 99/100
+    12/12 [==============================] - 2s 151ms/step - loss: 0.6267 - accuracy: 0.7347 - val_loss: 0.8120 - val_accuracy: 0.6282
+    Epoch 100/100
+    12/12 [==============================] - 2s 151ms/step - loss: 0.6321 - accuracy: 0.7243 - val_loss: 0.7238 - val_accuracy: 0.6926
+    Test accuracy:  0.7046979665756226
+    Training time: 195.98048996925354 seconds
+    
 
 ##### Plot evalution results
 
@@ -579,6 +1101,18 @@ def plot_model_loss_and_acc(model, name):
 plot_model_loss_and_acc(self_train_model, 'Self Train CNNs')
 plot_model_loss_and_acc(pre_train_model, 'With Pre-trained Model(Resnet50)')
 ```
+
+
+    
+![png](water-bottle-images-classification-cnn-resnet50_files/water-bottle-images-classification-cnn-resnet50_35_0.png)
+    
+
+
+
+    
+![png](water-bottle-images-classification-cnn-resnet50_files/water-bottle-images-classification-cnn-resnet50_35_1.png)
+    
+
 
 #### Plot confusion matrix
 
@@ -680,6 +1214,31 @@ print("")
 generate_cf(pre_train_model, 'With Pre-trained Model (Resnet50)')
 ```
 
+    30/30 [==============================] - 1s 14ms/step
+    
+
+
+    
+![png](water-bottle-images-classification-cnn-resnet50_files/water-bottle-images-classification-cnn-resnet50_40_1.png)
+    
+
+
+    Self Train CNNs accuracy score: 0.9291084854994629
+    
+    
+    
+    30/30 [==============================] - 3s 45ms/step
+    
+
+
+    
+![png](water-bottle-images-classification-cnn-resnet50_files/water-bottle-images-classification-cnn-resnet50_40_3.png)
+    
+
+
+    With Pre-trained Model (Resnet50) accuracy score: 0.6455424274973147
+    
+
 
 ```python
 '''
@@ -728,6 +1287,12 @@ plt.show()
 
 ```
 
+
+    
+![png](water-bottle-images-classification-cnn-resnet50_files/water-bottle-images-classification-cnn-resnet50_41_0.png)
+    
+
+
 ---
 <a id='hyperparameter_tuning'></a>
 ## 5. Hyperparameter Tuning
@@ -763,7 +1328,7 @@ cv = [(slice(None), slice(None))]
 # Design Model Layers
 def create_model(optimizer):
     model = Sequential()
-    model.add(Conv2D(32, (3,3), activation='relu', input_shape=(128, 128, 3)))
+    model.add(Conv2D(32, (3,3), activation='relu', input_shape=(input_size, input_size, 3)))
     model.add(Conv2D(32, (3, 3),activation='relu'))
     model.add(MaxPooling2D(pool_size=(2, 2)))
     model.add(Dropout(0.2))
@@ -810,6 +1375,17 @@ print("Training time:", training_time, "seconds")
 grid_time = training_time
 ```
 
+    30/30 [==============================] - 1s 29ms/step - loss: 0.0045 - accuracy: 0.9987
+    30/30 [==============================] - 1s 29ms/step - loss: 0.0012 - accuracy: 1.0000
+    15/15 [==============================] - 1s 58ms/step - loss: 0.0347 - accuracy: 0.9933
+    Best: 1.000000 using {'batch_size': 128, 'epochs': 100, 'optimizer': 'adam'}
+    0.998657 (0.000000) with: {'batch_size': 128, 'epochs': 50, 'optimizer': 'adam'}
+    1.000000 (0.000000) with: {'batch_size': 128, 'epochs': 100, 'optimizer': 'adam'}
+    0.993285 (0.000000) with: {'batch_size': 256, 'epochs': 50, 'optimizer': 'adam'}
+    nan (nan) with: {'batch_size': 256, 'epochs': 100, 'optimizer': 'adam'}
+    Training time: 808.008086681366 seconds
+    
+
 
 ```python
 '''
@@ -818,6 +1394,31 @@ Overview detailed information about the grid search cross-validation process
 import pandas as pd
 print(pd.DataFrame(grid_result.cv_results_))
 ```
+
+       mean_fit_time  std_fit_time  mean_score_time  std_score_time  \
+    0     127.332934           0.0         1.171087             0.0   
+    1     258.078088           0.0         1.187089             0.0   
+    2     154.280100           0.0         1.202089             0.0   
+    3      13.380104           0.0         0.000000             0.0   
+    
+      param_batch_size param_epochs param_optimizer  \
+    0              128           50            adam   
+    1              128          100            adam   
+    2              256           50            adam   
+    3              256          100            adam   
+    
+                                                  params  split0_test_score  \
+    0  {'batch_size': 128, 'epochs': 50, 'optimizer':...           0.998657   
+    1  {'batch_size': 128, 'epochs': 100, 'optimizer'...           1.000000   
+    2  {'batch_size': 256, 'epochs': 50, 'optimizer':...           0.993285   
+    3  {'batch_size': 256, 'epochs': 100, 'optimizer'...                NaN   
+    
+       mean_test_score  std_test_score  rank_test_score  
+    0         0.998657             0.0                2  
+    1         1.000000             0.0                1  
+    2         0.993285             0.0                3  
+    3              NaN             NaN                4  
+    
 
 
 ```python
@@ -830,6 +1431,9 @@ result = grid.predict(X_test)
 predicted_labels = list(map(lambda x: output_labels[x], result))
 # print(predicted_labels[:5])
 ```
+
+    30/30 [==============================] - 1s 13ms/step
+    
 
 
 ```python
@@ -867,6 +1471,15 @@ print("GridSerachCV accuracy score:{}".format(accuracy))
 ```
 
 
+    
+![png](water-bottle-images-classification-cnn-resnet50_files/water-bottle-images-classification-cnn-resnet50_47_0.png)
+    
+
+
+    GridSerachCV accuracy score:0.9419978517722879
+    
+
+
 ```python
 '''
 Show a prediction of images from the test set
@@ -893,6 +1506,33 @@ for i, img in enumerate(sample_images):
     
 plt.show()
 ```
+
+    Clipping input data to the valid range for imshow with RGB data ([0..1] for floats or [0..255] for integers).
+    Clipping input data to the valid range for imshow with RGB data ([0..1] for floats or [0..255] for integers).
+    Clipping input data to the valid range for imshow with RGB data ([0..1] for floats or [0..255] for integers).
+    Clipping input data to the valid range for imshow with RGB data ([0..1] for floats or [0..255] for integers).
+    Clipping input data to the valid range for imshow with RGB data ([0..1] for floats or [0..255] for integers).
+    Clipping input data to the valid range for imshow with RGB data ([0..1] for floats or [0..255] for integers).
+    Clipping input data to the valid range for imshow with RGB data ([0..1] for floats or [0..255] for integers).
+    Clipping input data to the valid range for imshow with RGB data ([0..1] for floats or [0..255] for integers).
+    Clipping input data to the valid range for imshow with RGB data ([0..1] for floats or [0..255] for integers).
+    Clipping input data to the valid range for imshow with RGB data ([0..1] for floats or [0..255] for integers).
+    Clipping input data to the valid range for imshow with RGB data ([0..1] for floats or [0..255] for integers).
+    Clipping input data to the valid range for imshow with RGB data ([0..1] for floats or [0..255] for integers).
+    Clipping input data to the valid range for imshow with RGB data ([0..1] for floats or [0..255] for integers).
+    Clipping input data to the valid range for imshow with RGB data ([0..1] for floats or [0..255] for integers).
+    Clipping input data to the valid range for imshow with RGB data ([0..1] for floats or [0..255] for integers).
+    Clipping input data to the valid range for imshow with RGB data ([0..1] for floats or [0..255] for integers).
+    Clipping input data to the valid range for imshow with RGB data ([0..1] for floats or [0..255] for integers).
+    Clipping input data to the valid range for imshow with RGB data ([0..1] for floats or [0..255] for integers).
+    Clipping input data to the valid range for imshow with RGB data ([0..1] for floats or [0..255] for integers).
+    
+
+
+    
+![png](water-bottle-images-classification-cnn-resnet50_files/water-bottle-images-classification-cnn-resnet50_48_1.png)
+    
+
 
 <a id='summary'></a>
 # Summary
